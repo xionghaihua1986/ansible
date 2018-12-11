@@ -1,0 +1,22 @@
+---
+
+- name: copy tomcat server.xml
+  template:
+    src: "server.xml.j2"
+    dest: "{{ tomcat_work_path }}/conf/server.xml"
+    mode: 0644
+  notify: Restart tomcat
+
+- name: Copy tomcat start scripts
+  template:
+    src: tomcat.init.j2 
+    dest: "/etc/rc.d/init.d/{{ tomcat_services_name }}"
+    mode: 0755
+
+#修改tomcat的目录的属主为tomcat
+- name: modify tomcat work user 
+  shell: chown -R {{ tomcat_user}}:{{ tomcat_user }} {{ software_install_path }}/apache-tomcat-{{ tomcat_version }}
+
+- name: start tomcat service
+  service: name=tomcat state=started enabled=yes
+ 

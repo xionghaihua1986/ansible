@@ -1,0 +1,15 @@
+---
+- hosts: testserver
+  remote_user: admin
+  become: yes
+  vars:
+    - haproxy_frontend_port: 80
+    - haproxy_frontend_name: frontend_www_c_com
+    - haproxy_backend_name: backend_www_c_com
+    - haproxy_backend_servers:
+        - name: "node01"
+          address: "192.168.10.163:8080"
+        - name: "node02"
+          address: "192.168.10.164:8080"
+  roles:
+    - haproxy 

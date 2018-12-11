@@ -1,0 +1,9 @@
+---
+
+- name: download jdk rpm packages
+  get_url: url={{ java_file_url }} dest=/tmp
+ 
+- name: install jdk
+  shell: yum -y localinstall /tmp/{{ java_file }}
+
+

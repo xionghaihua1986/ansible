@@ -1,0 +1,28 @@
+---
+- hosts: testserver
+  remote_user: admin
+  become: yes
+  vars:
+    - ngx_proxy_cache_path: /data/app/nginx/cache levels=1:2:1 keys_zone=mycache:10m inactive=24h max_size=10g
+    - config: www.b.com.conf
+    - ngx_vhosts:
+        - listen: 80
+          server_name: www.b.com
+          access_log: /data/log/nginx/www.b.com_access.log main
+          error_log: /data/log/nginx/www.b.com_error.log
+          extra_parameters: |
+            location / {
+                   proxy_pass http://192.168.10.163:8080;
+                   proxy_set_header Host $host;
+                   proxy_set_header X-Real-IP $remote_addr;
+                   proxy_set_header X-Forwarded-for $proxy_add_x_forwarded_for;
+                   proxy_cache mycache;
+                   proxy_cache_valid 200 302 1d;
+                   proxy_cache_valid any      2m;
+                   proxy_cache_bypass $cookie_nocache $arg_nocache$arg_comment;
+                   proxy_cache_bypass $http_pragma    $http_authorization;
+                   proxy_cache_key $host$uri$is_args$args;
+                   proxy_cache_use_stale error timeout invalid_header updating http_500 http_502 http_503 http_504;     
+               }
+  roles:
+    - { role: nginx }

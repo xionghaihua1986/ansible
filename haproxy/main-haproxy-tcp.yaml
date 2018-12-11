@@ -1,0 +1,20 @@
+---
+- hosts: testserver
+  remote_user: admin
+  become: yes
+  vars:
+    - haproxy_frontend_port: 2222
+    - haproxy_frontend_mode: "tcp"
+    - haproxy_frontend_vars:
+      - "option tcplog"
+    - haproxy_backend_name: tcp_www_c_com
+    - haproxy_backend_httpchk: ""
+    - haproxy_backend_mode: "tcp"
+        
+    - haproxy_backend_servers:
+        - name: "node01"
+          address: "192.168.10.163:22"
+        - name: "node02"
+          address: "192.168.10.164:22"
+  roles:
+    - haproxy 

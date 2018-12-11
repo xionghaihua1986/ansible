@@ -1,0 +1,46 @@
+##安装tomcat
+
+- name: Check if tomcat local file is already configured.
+  stat: path={{ tomcat_file_path }}
+  register: file_result
+  
+- name: create software directory
+  file: path={{ software_files_path }} state=directory
+  when: not file_result.stat.exists
+
+- name: download tomcat file
+  get_url: url={{ tomcat_file_url }} dest={{ software_files_path }}
+  when: not file_result.stat.exists
+
+#安装tomcat
+
+- name: create install directory
+  file: path={{ software_install_path }} state=directory
+
+- name: create tomcat group
+  group: name={{ tomcat_user }}
+
+- name: create tomcat user
+  user: name={{ tomcat_user }} group={{ tomcat_user }} shell=/sbin/nologin
+
+- name: install yilai packages
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - gcc
+    - gcc-c++
+    - libtool
+    - make
+    - libcap-devel
+    - expat-devel
+
+- name: check tomcat is install
+  stat: path={{ tomcat_work_path }}
+  register: work_file_result
+
+- name: install tomcat 
+  shell:  tar xf {{ software_files_path }}/{{ tomcat_file }} -C {{ software_install_path }}/ && ln -s {{ software_install_path }}/apache-tomcat-{{ tomcat_version }} {{ tomcat_work_path }}
+  when: not work_file_result.stat.exists
+
+

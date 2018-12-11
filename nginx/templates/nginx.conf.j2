@@ -1,0 +1,91 @@
+user {{ ngx_user }};
+
+error_log {{ ngx_error_log }};
+pid {{ ngx_pidfile }};
+
+worker_processes auto;
+worker_rlimit_nofile 51200;
+worker_cpu_affinity auto;
+
+events {
+        use epoll;
+	worker_connections {{ ngx_worker_connections }};
+ }
+
+{% if ngx_extra_conf_options %}
+	{{ ngx_extra_conf_options }}
+{% endif %}
+
+{% if ngx_stream %}
+  stream {
+	{% for upstream in tcp_upstreams %}
+        upstream {{ upstream.name }} {
+        {% if upstream.strategy is defined %}
+          {{ upstream.strategy }}; 
+        {% endif %}
+        {% for server in upstream.servers %}
+          server {{ server }};
+        {% endfor %}
+        {% if upstream.keepalive is defined %}
+          keepalive {{ upstream.keepalive }};
+        {% endif %} 
+      }
+      {% endfor %}
+      {% for thost in tcp_vhosts %} 
+        server {
+          listen {{ thost.listen }};
+	  proxy_pass {{ thost.proxy_pass }};
+        }  
+    {% endfor %}
+}
+{% endif %}
+
+
+http {
+	include mime.types;
+	default_type application/octet-stream; #默认文件类型
+	
+	client_max_body_size {{ ngx_client_max_body_size }};
+	
+	log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+	access_log  {{ ngx_access_log }};
+        
+
+    	sendfile        {{ ngx_sendfile }};
+	tcp_nopush      {{ ngx_tcp_nopush }};
+    	tcp_nodelay     {{ ngx_tcp_nodelay }};
+	keepalive_timeout  {{ ngx_keepalive_timeout }};
+    	keepalive_requests {{ ngx_keepalive_requests }};
+    	gzip on;
+    	gzip_min_length  1100;
+    	gzip_buffers     4 32k;
+    	gzip_http_version 1.0;
+    	gzip_comp_level 6;
+    	gzip_types text/plain text/css text/javascript application/json application/javascript application/x-javascript application/xml;
+    	gzip_vary on;
+	
+	{% if ngx_proxy_cache_path %}
+    	proxy_cache_path {{ ngx_proxy_cache_path }};
+	{% endif %}
+	
+        #upstream配置
+	{% for upstream in ngx_upstreams %}
+    	upstream {{ upstream.name }} {
+	{% if upstream.strategy is defined %}
+          {{ upstream.strategy }};
+	{% endif %}
+	{% for server in upstream.servers %}
+          server {{ server }};
+	{% endfor %}
+	{% if upstream.keepalive is defined %}
+          keepalive {{ upstream.keepalive }};
+	{% endif %}
+       }
+     {% endfor %}
+        include {{ ngx_virtual_path }}/*.conf;	
+	{% include 'nginx_default_server.conf.j2' %}
+}
+
+

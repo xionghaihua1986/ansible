@@ -1,0 +1,6 @@
+---
+- hosts: tomcat 
+  remote_user: admin
+  become: yes
+  roles:
+    - tomcat 

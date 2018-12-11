@@ -1,0 +1,13 @@
+email: root@localhost
+router_id: LVS_DEVE
+mcast: 224.11.11.161
+instancename: v1
+vrrp_eth: ens32
+virtual_router_id: 56
+auth_pass: 123456
+vip: 
+ - { "ip":"192.168.10.18/24","dev":"ens32","scope":"global" }
+#[gaokeyong]
+#192.168.10.166 keepalive_role=master keepalive_prority=100
+#192.168.10.167 keepalive_root=slave keepalive_prority=98
+

@@ -1,0 +1,7 @@
+---
+#use yum install keepaived
+
+- name: install keepalived service
+  yum: name=keepalived state=latest
+
+

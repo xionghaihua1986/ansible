@@ -1,0 +1,23 @@
+---
+- hosts: webserver
+  remote_user: admin
+  become: yes
+  vars:
+    - config: www.c.com.conf
+    - ngx_vhosts:
+        - listen: 8080
+          server_name: www.c.com
+          access_log: /data/log/nginx/www.c.com_access.log main
+          error_log: /data/log/nginx/www.c.com_error.log
+          locations:
+             - name: /
+               root: /data/html/code
+               index: index.php index.html index.html
+             - name: ~* \.php$
+               root: /data/html/code
+               fastcgi_pass: 127.0.0.1:9000
+               fastcgi_index: index.php
+               include: fastcgi_params
+               fastcgi_param: SCRIPT_FILENAME $document_root$fastcgi_script_name
+  roles:
+    - { role: nginx }

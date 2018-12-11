@@ -1,0 +1,21 @@
+---
+
+- name: configtest nginx
+  shell: /etc/rc.d/init.d/nginx configtest
+
+- name: Reload nginx - after config check
+  service: name=nginx state=reloaded
+
+- name: Reload nginx
+  debug: msg="checking config first"
+  changed_when: True
+  notify: 
+   - configtest nginx
+   - Reload nginx - after config check
+
+
+
+
+
+
+

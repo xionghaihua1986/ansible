@@ -1,0 +1,151 @@
+---
+###########安装haproxy###############
+
+#判断haproxy安装文件是否存在
+
+- name: check haproxy file is already
+  stat: path={{ haproxy_file_path }}
+  register: file_result
+
+- name: create software file path
+  file: path={{ software_files_path }} state=directory
+  when: not file_result.stat.exists
+
+#下载haproxy软件
+- name: download haproxy file
+  get_url: url={{ haproxy_file_url }} dest={{ software_files_path }}
+  when: not file_result.stat.exists
+
+#创建安装目录
+
+- name: create install directory
+  file: path={{ software_install_path }} state=directory
+
+#解压软件包到/tmp
+- name: check tmp directory have haproxy
+  stat: path=/tmp/haproxy-{{ haproxy_version }}
+  register: tmp_file_result
+
+- name: copy haproxy file to tmp
+  shell: tar xf {{ haproxy_file_path }} -C /tmp/
+  when: not tmp_file_result.stat.exists
+
+#安装依赖包
+- name: install yilai packages
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - gcc
+    - gcc-c++
+    - libtool
+    - make
+    - zlib
+    - zlib-devel
+    - openssl
+    - openssl-devel
+    - pcre
+    - pcre-devel
+  when: ansible_os_family == 'RedHat'
+
+#创建haproxy的用户和组
+
+- name: create haproxy group
+  group: name={{ haproxy_user }}
+
+- name: create haproxy user
+  user: name={{ haproxy_user }} group={{ haproxy_user }} shell=/sbin/nologin
+
+#创建haproxy的工作目录
+
+- name: create haproxy working directory
+  file: path={{ item }} state=directory owner={{ haproxy_user }} group={{ haproxy_user }}
+  with_items:
+    - "{{ haproxy_conf_path }}"
+    - "{{ haproxy_logspath }}"
+
+#安装haproxy，先检查是否安装
+- name: check haproxy bin file is exists
+  stat: path={{ haproxy_chroot }}/sbin/haproxy
+  register: haproxy_bin_result
+
+- name: install haproxy
+  shell: "{{ item }}"
+  with_items:
+     - "{{ haproxy_configure_command }}"
+     - "make install PREFIX={{ haproxy_chroot }}"
+  args:
+    chdir: "/tmp/haproxy-{{ haproxy_version }}"
+  when: not haproxy_bin_result.stat.exists
+
+#copy errorfiles to haproxy home
+
+- name: copy errorfiles to haproxy
+  command: "cp -rf /tmp/haproxy-{{ haproxy_version }}/examples/errorfiles {{ haproxy_chroot }}/"
+
+#配置环境变量
+- name: config environment var
+  lineinfile: dest=/etc/profile line="export PATH={{ haproxy_chroot }}/sbin/:$PATH"
+
+- name: zhixing source
+  shell: source /etc/profile
+
+##########haproxy安装结束########################
+
+
+#############haproxy配置开始#########################
+
+#拷贝haproxy.cfg配置文件
+
+- name: copy haproxy configuration 
+  template:
+    src: haproxy.cfg.j2
+    dest: "{{ haproxy_conf_path }}/haproxy.cfg"
+    mode: 0644
+  notify: Restart haproxy 
+  tags: conf
+
+#拷贝haproxy的启动脚本
+
+- name: copy haproxy init scripts file
+  template:
+    dest: "/etc/init.d/haproxy"
+    src: haproxy.init.j2
+    mode: 0755
+
+#添加haproxy
+
+- name: add haproxy service
+  shell: "chkconfig --add haproxy && chkconfig haproxy on"
+
+#启动haproxy服务
+
+- name: start haproxy service
+  service: name=haproxy state=started enabled=yes
+#######################################
+#
+#####################haproxy日志切割#################
+
+- name: haproxy logrotate conf file
+  template:
+    dest: "/etc/logrotate.d/haproxy"
+    src: haproxy.logrotate.j2
+    mode: 0755
+
+####################rsyslog配置##################
+
+- name: install rsyslog packages
+  yum: name=rsyslog state=installed
+  when: ansible_os_family == 'RedHat'
+
+- name: copy rsyslog file
+  template:
+    src: rsyslog.conf.j2
+    dest: /etc/rsyslog.conf
+    mode: 0644
+  notify: Restart rsyslog
+
+- name: start rsyslog service
+  service: name=rsyslog  state=started enabled=yes
+
+

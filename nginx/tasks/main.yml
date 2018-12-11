@@ -1,0 +1,140 @@
+---
+###########################安装nginx服务器###############################
+#先检查本地是否存在nginx安装包
+
+- name: check nginx file
+  stat: path={{ ngx_file_path }}
+  register: ngx_file_result
+
+#创建存放文件的目录
+- name: create software directory
+  file: path={{ software_files_path }} state=directory
+  when: not ngx_file_result.stat.exists
+
+#下载nginx软件
+
+- name: download nginx file
+  get_url: url={{ ngx_file_url }} dest={{ software_files_path }}
+  when: not ngx_file_result.stat.exists
+
+#创建安装目录
+
+- name: create install directory
+  file: path={{ software_install_path }} state=directory
+
+#安装依赖包
+
+- name: install yilai packages
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - gcc
+    - gcc-c++
+    - libtool
+    - make
+    - zlib
+    - zlib-devel
+    - openssl
+    - openssl-devel
+    - pcre
+    - pcre-devel
+    - gd-devel
+
+#创建nginx用户和组
+
+- name: create nginx group
+  group: name={{ ngx_group }} gid=5555
+
+- name: create nginx user
+  user: name={{ ngx_user }} group={{ ngx_group }} uid=5555 shell=/sbin/nologin createhome=no
+
+#创建nginx的一些工作目录（如日志，tmp)
+
+- name: create nginx work directory
+  file: path={{ item }} state=directory owner={{ ngx_user }} group={{ ngx_group }} mode=0755
+  with_items:
+    - "{{ software_install_path }}/nginx-{{ ngx_version }}"
+    - "{{ ngx_temp_path }}/client"
+    - "{{ ngx_temp_path }}/proxy"
+    - "{{ ngx_temp_path }}/fcgi"
+    - "{{ ngx_logpath }}"
+
+#安装nginx
+- name: unzip nginx file
+  shell: tar xf {{ ngx_file_path }} -C /tmp
+
+- name: install nginx
+  shell: "{{ item }}"
+  with_items: 
+    - "{{ ngx_configure_command }}"
+    - make && make install 
+  args:
+    chdir: "/tmp/nginx-{{ ngx_version }}"
+#修改nginx安装的属主和属组
+- name: modify nginx directory 
+  file: path={{ software_install_path }}/nginx-{{ ngx_version }} state=directory owner={{ ngx_user }} group={{ ngx_group }} recurse=yes
+
+#创建nginx软链接
+
+- name: create nginx soft link
+  file: src={{ software_install_path }}/nginx-{{ ngx_version }} dest={{ software_install_path }}/nginx owner={{ ngx_user }} group={{ ngx_group }} state=link
+
+#配置环境变量
+
+- name: configure environment variable
+  lineinfile: dest=/etc/profile line='export PATH={{ software_install_path }}/nginx/sbin/:$PATH'
+
+###################################################安装nginx结束######################################
+###################################################开始nginx配置######################################
+
+- name: copy nginx.conf
+  template:
+     dest: "{{ ngx_conf_file_path }}"
+     src: nginx.conf.j2
+     owner: "{{ ngx_user }}"
+     group: "{{ ngx_group }}"
+     mode: 0644
+  notify: Reload nginx
+  tags: vconf
+#创建虚拟机主机
+
+- name: create virtual directory
+  file: 
+     path: "{{ ngx_virtual_path }}" 
+     state: directory
+     owner: "{{ ngx_user }}"
+     group: "{{ ngx_group }}"
+     mode: 0755
+   
+- name: copy virtual configure
+  template:
+     dest: "{{ ngx_virtual_path }}/{{ config }}"
+     src:   nginx_vhosts.conf.j2
+     owner: "{{ ngx_user }}"
+     group: "{{ ngx_group }}"
+     mode: 0644
+  notify: Reload nginx
+  tags: vconf
+  #when: ngx_stream == "false"
+  
+
+
+- name: configure nginx.sh file
+  template:
+    dest: "/etc/rc.d/init.d/nginx"
+    mode: 0755
+    src: nginx.sh.j2
+
+#启动服务
+
+- name: start nginx service
+  service: name=nginx state=started enabled=yes
+  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+  tags: start_nginx
+###################################################nginx配置结束##########################
+##################################nginx日志文件开始##################################
+- name: Setup Nginx logrotate conf file.
+  template:
+    dest: "/etc/logrotate.d/nginx"
+    src: nginx.logrotate.j2

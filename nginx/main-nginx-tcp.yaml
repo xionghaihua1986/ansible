@@ -1,0 +1,17 @@
+---
+- hosts: testserver
+  remote_user: admin
+  become: yes
+  vars:
+    - ngx_stream: true
+    - tcp_upstreams:
+      - name: sshd
+        servers:
+          - 192.168.10.163:22 max_fails=2 fail_timeout=2
+          - 192.168.10.164:22 max_fails=2 fail_timeout=2
+    -  tcp_vhosts:
+        - listen: 2222
+          proxy_pass: sshd  
+          proxy_connect_timeout: 1s
+  roles:
+    - nginx

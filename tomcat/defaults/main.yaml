@@ -1,0 +1,38 @@
+---
+
+software_files_path: "/opt/software"
+software_install_path: "/data/app"
+
+tomcat_version: "8.5.35"
+tomcat_file: "apache-tomcat-{{ tomcat_version }}.tar.gz"
+tomcat_path: "{{ software_install_path }}/apache-tomcat-{{ tomcat_version }}"
+
+tomcat_work_path: "{{ software_install_path }}/tomcat"
+tomcat_file_path: "{{ software_files_path }}/{{ tomcat_file }}"
+
+tomcat_file_url: "http://mirrors.hust.edu.cn/apache/tomcat/tomcat-8/v{{ tomcat_version }}/bin/{{ tomcat_file }}"
+
+
+tomcat_enabled: true
+tomcat_user: tomcat
+tomcat_catalina_port: 8080 
+
+tomcat_server_port: 8005
+tomcat_catalina_ajp_port: 8009
+tomcat_catalina_redirect_port: 8443
+tomcat_server_active: false
+tomcat_ajp_active: false
+tomcat_hostname: localhost
+tomcat_unpackWARs: true
+tomcat_autoDeploy: true
+
+
+tomcat_services_name: "tomcat"
+
+tomcat_catalina_opts: "-server -Xms1024m -Xmx1024m -XX:PermSize=256M -XX:MaxNewSize=256m -XX:MaxPermSize=256m -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Djava.awt.headless=true"
+
+#jdk
+java_file: "jdk-8u181-linux-x64.rpm"
+java_file_url: "http://download.51yuki.cn/{{ java_file }}"
+
+

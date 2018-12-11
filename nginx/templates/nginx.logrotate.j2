@@ -1,0 +1,11 @@
+{{ ngx_access_log }} {
+    daily
+    dateext
+    missingok
+    rotate 100
+    nocompress
+    sharedscripts
+    postrotate
+        [ ! -f {{ ngx_pidfile }} ] || kill -USR1 `cat {{ ngx_pidfile }}`
+    endscript
+}

@@ -1,0 +1,36 @@
+---
+
+#判断软件是否存在
+- name: check maven software is exists
+  stat: path={{ mvn_file_path }}
+  register: file_result
+
+#如果软件不存在，就创建目录
+
+- name: create software directory
+  file: path={{ software_files_path }} state=directory
+  when: not file_result.stat.exists
+
+#下载maven软件
+
+- name: download maven file
+  get_url: url={{ mvn_file_url }} dest={{ software_files_path }}
+  when: not file_result.stat.exists
+
+#确保安装目录存在
+
+- name: confirm install directory is exists
+  file: path={{ software_install_path }} state=directory
+
+#解压
+
+- name: copy maven file to agent
+  shell: tar xf {{ mvn_file_path }} -C {{ software_install_path }}/
+  #unarchive:
+    #src: "{{ mvn_file_path }}"
+    #dest: "{{ software_install_path }}/"
+#创建软链接
+- name: Create mvn dir soft link
+  file: "src={{ mvn_install_path }}/bin/mvn dest=/usr/bin/mvn state=link force={{ link_force }}"
+
+

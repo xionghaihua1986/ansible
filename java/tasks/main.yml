@@ -1,0 +1,53 @@
+---
+#创建软件目录
+
+- name: check java local file is configured
+  stat: path={{ file_path }}
+  register: file_result
+
+- name: create software directory
+  file: path={{ file_path }} state=directory owner=root  group=root mode=0755
+  when: not file_result.stat.exists
+
+#下载java file文件
+
+- name: Download java file
+  get_url: url={{ java_file_url }} dest={{ file_path }} 
+
+#创建安装目录
+
+- name: confirm installation directory is exsit
+  file:  path={{ install_path }} state=directory owner=root group=root mode=0755
+
+#解压文件
+
+- name: copy java file to agent
+  shell: tar xf {{ file_path }}/{{ java_file }} -C {{ install_path }}/ 
+  
+#创建软链接，先检查
+- name: check java soft link
+  stat: path={{ java_home}}
+  register: link_result
+
+- name: create java home dir
+  file: dest=/usr/java state=directory
+  when: not link_result.stat.exists
+
+- name: create java dir soft link
+  file:
+    src: "{{ java_install_path }}"
+    dest: "{{ java_home }}"
+    state: link
+
+# 环境变量配置
+
+- name: Set JAVA_HOME if configured.
+  template:
+    src: java_home.sh.j2
+    dest: /etc/profile.d/java_home.sh
+    owner: root
+    group: root
+    mode: 0644
+
+- name: source java_home
+  shell:  source /etc/profile.d/java_home.sh 

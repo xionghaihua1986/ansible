@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+num=$(ps -C haproxy --no-header|wc -l)
+
+if [ $num -eq 0 ];then
+	/etc/init.d/haproxy start &>/dev/null
+	if [ $? -ne 0 ];then
+		systemctl stop keepalived
+ 	fi
+fi
+

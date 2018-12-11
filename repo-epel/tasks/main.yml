@@ -1,0 +1,77 @@
+---
+
+#判断系统epel是否存在
+
+- name: check epel repo is configure
+  stat: path={{ repofile_path }}
+  register: epel_result
+
+#安装epel
+
+- name: install epel repo
+  yum:
+    name: "{{ repo_url }}"
+    state: present
+  register: result
+  until: '"failed" not in result'
+  retries: 5
+  delay: 5
+  when: not epel_result.stat.exists
+
+# 导入epel gpg key
+#
+
+- name: Import EPEL GPG key
+  rpm_key:
+    key: "{{ gpg_key }}"
+    state: present
+  when: not epel_result.stat.exists
+
+##判断系统epel-testing是否存在
+
+- name: check epel testing is configure
+  stat: path={{ testing_repofile_path }}
+  register: epel_testing_result
+
+#修改CentOS-Base的url为aliyun的
+#
+
+- name: change centos base source
+  replace: dest={{ centos_repofile_path }} regexp={{ item.reg }} replace={{ item.rep }}
+  with_items:
+     - {'reg': '#baseurl=', 'rep': 'baseurl='}
+     - {'reg': 'mirrorlist=', 'rep': '#mirrorlist='}
+     - {'reg': 'http://mirror.centos.org','rep': "{{ source_url }}"}
+     - {'reg': '\$releasever','rep': "{{ ansible_distribution_major_version }}"}
+  when: change_epel and epel_result.stat.exists
+
+
+#修改epel.repo
+#
+
+- name: change epel source
+  replace: dest={{ repofile_path }} regexp={{ item.reg }} replace={{ item.rep }}
+  with_items:
+    - {'reg':'#baseurl=', 'rep': 'baseurl='}
+    - {'reg':'mirrorlist=', 'rep':'#mirrorlist='}
+    - {'reg':'metalink=', 'rep':'#metalink='}
+    - {'reg':'http://download.fedoraproject.org/pub', 'rep': "{{ source_url }}"}
+  when: change_epel and epel_result.stat.exists
+
+#修改epel-testing.repo
+
+- name: change epel-testing source
+  replace: dest={{ testing_repofile_path }} regexp={{ item.reg }} replace={{ item.rep }}
+  with_items:
+    - {'reg':'#baseurl=', 'rep': 'baseurl='}
+    - {'reg':'mirrorlist=', 'rep':'#mirrorlist='}
+    - {'reg':'metalink=', 'rep':'#metalink='}
+    - {'reg':'http://download.fedoraproject.org/pub', 'rep': "{{ source_url }}"}
+  when: change_epel and epel_testing_result.stat.exists
+
+# 刷新 yum cache
+#
+- name: update yum cache
+  shell:  yum clean all && yum makecache
+  when: change_epel
+

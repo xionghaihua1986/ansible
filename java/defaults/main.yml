@@ -1,0 +1,11 @@
+---
+
+install_path: "/usr/local"
+file_path: "/opt/software"
+java_version: "java1.8"
+java_home: "/usr/java/jdk"
+java_file:  "jdk-8u181-linux-x64.tar.gz"
+java_file_path:  "{{ file_path }}/{{ java_file }}"
+java_install_path: "{{ install_path }}/jdk1.8.0_181"
+java_file_url: "http://download.51yuki.cn/jdk-8u181-linux-x64.tar.gz"
+
